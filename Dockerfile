@@ -1,4 +1,4 @@
-FROM rustlang/rust:nightly-slim as build
+FROM rust:slim as build
 
 RUN apt-get update
 RUN apt-get install musl-tools -y
@@ -29,7 +29,7 @@ RUN RUSTFLAGS=-Clinker=musl-gcc cargo build --release \
 RUN rm -f target/x86_64-unknown-linux-musl/release/deps/twilight_http_proxy*
 COPY ./src ./src
 
-RUN RUSTFLAGS=-Clinker=musl-gcc cargo build --release \
+RUN PKG_CONFIG_ALLOW_CROSS=1 RUSTFLAGS=-Clinker=musl-gcc cargo build --release \
     --target=x86_64-unknown-linux-musl
 
 FROM alpine:latest
