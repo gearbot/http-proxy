@@ -102,6 +102,7 @@ async fn handle_request(
             return Err(RequestError::NoPath { uri });
         }
     };
+    let p = format!("{:?}", path);
     let raw_request = TwilightRequest {
         body: Some(bytes),
         form: None,
@@ -129,6 +130,8 @@ async fn handle_request(
         .context(MakingResponseBody)?;
 
     debug!("Response: {:?}", resp);
+
+    info!("{:?}: {}", p, resp.status());
 
     Ok(resp)
 }
