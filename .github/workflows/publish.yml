@@ -15,7 +15,6 @@ jobs:
           override: true
       - name: Setup cache
         uses: actions/cache@v2
-        with:
         path: |
               ~/.cargo/registry
               ~/.cargo/git
