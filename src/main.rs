@@ -22,6 +22,16 @@ use tracing_log::LogTracer;
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::{fmt, EnvFilter};
 use twilight_http::{client::Client, request::Request as TwilightRequest, routing::Path};
+use std::time::Instant;
+use metrics::timing;
+use metrics_core::{Builder, Drain};
+use http::StatusCode;
+use tokio::sync::RwLock;
+use lazy_static::lazy_static;
+use metrics_runtime::{exporters::HttpExporter, observers::PrometheusBuilder, Receiver};
+
+
+
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -45,18 +55,32 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let address = SocketAddr::from((host, port));
 
+    let receiver = Receiver::builder()
+        .build()
+        .expect("Failed to create receiver!");
+
+    let controller = receiver.controller();
+    receiver.install();
+    let mut exporter = HttpExporter::new(
+        controller,
+        PrometheusBuilder::new(),
+        SocketAddr::from((host, port+1)),
+    );
+
+    tokio::spawn(async move { exporter.async_run().await.unwrap() });
+
     // The closure inside `make_service_fn` is run for each connection,
     // creating a 'service' to handle requests for that specific connection.
     let service = service::make_service_fn(move |addr: &AddrStream| {
         debug!("Connection from: {:?}", addr);
         let client = client.clone();
-
         async move {
             Ok::<_, RequestError>(service::service_fn(move |incoming: Request<Body>| {
                 handle_request(client.clone(), incoming)
             }))
         }
     });
+
 
     let server = Server::bind(&address).serve(service);
 
@@ -67,6 +91,59 @@ async fn main() -> Result<(), Box<dyn Error>> {
     }
 
     Ok(())
+}
+
+fn path_name(path: &Path) -> &'static str {
+    match path {
+        Path::ChannelsId(..)=> "Channel",
+        Path::ChannelsIdInvites(..)=> "Channel invite",
+        Path::ChannelsIdMessages(..)=> "Channel message",
+        Path::ChannelsIdMessagesBulkDelete(..)=> "Bulk delete message",
+        Path::ChannelsIdMessagesId(..)=> "Channel message",
+        Path::ChannelsIdMessagesIdReactions(..)=> "Message reaction",
+        Path::ChannelsIdMessagesIdReactionsUserIdType(..)=> "Message reaction for user",
+        Path::ChannelsIdPermissionsOverwriteId(..)=> "Channel permission override",
+        Path::ChannelsIdPins(..)=> "Channel pins",
+        Path::ChannelsIdPinsMessageId(..)=> "Specific channel pin",
+        Path::ChannelsIdTyping(..)=> "Typing indicator",
+        Path::ChannelsIdWebhooks(..)=> "Webhook",
+        Path::Gateway=> "Gateway",
+        Path::GatewayBot=> "Gateway bot info",
+        Path::Guilds=> "Guilds",
+        Path::GuildsId(..)=> "Guild",
+        Path::GuildsIdBans(..)=> "Guild bans",
+        Path::GuildsIdBansId(..)=> "Specific guild ban",
+        Path::GuildsIdAuditLogs(..)=> "Guild audit logs",
+        Path::GuildsIdBansUserId(..)=> "Guild ban for user",
+        Path::GuildsIdChannels(..)=> "Guild channel",
+        Path::GuildsIdWidget(..)=> "Guild widget",
+        Path::GuildsIdEmojis(..)=> "Guild emoji",
+        Path::GuildsIdEmojisId(..)=> "Specific guild emoji",
+        Path::GuildsIdIntegrations(..)=> "Guild integrations",
+        Path::GuildsIdIntegrationsId(..)=> "Specific guild integration",
+        Path::GuildsIdIntegrationsIdSync(..)=> "Sync guild integration",
+        Path::GuildsIdInvites(..)=> "Guild invites",
+        Path::GuildsIdMembers(..)=> "Guild members",
+        Path::GuildsIdMembersId(..)=> "Specific guild member",
+        Path::GuildsIdMembersIdRolesId(..)=> "Guild member role",
+        Path::GuildsIdMembersMeNick(..)=> "Modify own nickname",
+        Path::GuildsIdPreview(..)=> "Guild preview",
+        Path::GuildsIdPrune(..)=> "Guild prune",
+        Path::GuildsIdRegions(..)=> "Guild region",
+        Path::GuildsIdRoles(..)=> "Guild roles",
+        Path::GuildsIdRolesId(..)=> "Specific guild role",
+        Path::GuildsIdVanityUrl(..)=> "Guild vanity invite",
+        Path::GuildsIdWebhooks(..)=> "Guild webhooks",
+        Path::InvitesCode=> "Invite info",
+        Path::UsersId=> "User info",
+        Path::UsersIdConnections=> "User connections",
+        Path::UsersIdChannels=> "User channels",
+        Path::UsersIdGuilds=> "User in guild",
+        Path::UsersIdGuildsId=> "Guild from user",
+        Path::VoiceRegions=> "Voice region list",
+        Path::WebhooksId(..)=> "Webhook",
+        _ => "Unknown path!"
+    }
 }
 
 async fn handle_request(
@@ -102,7 +179,8 @@ async fn handle_request(
             return Err(RequestError::NoPath { uri });
         }
     };
-    let p = format!("{:?}", path);
+    let p = path_name(&path);
+    let m = method.to_string();
     let raw_request = TwilightRequest {
         body: Some(bytes),
         form: None,
@@ -112,12 +190,14 @@ async fn handle_request(
         path_str: path_and_query,
     };
 
+    let start = Instant::now();
     let resp = client.raw(raw_request).await.context(RequestIssue)?;
 
     let status = resp.status();
     let resp_headers = resp.headers().clone();
 
     let bytes = resp.bytes().await.context(ChunkingResponse)?;
+    let end = Instant::now();
 
     let mut builder = Response::builder().status(status);
 
@@ -131,7 +211,8 @@ async fn handle_request(
 
     debug!("Response: {:?}", resp);
 
-    info!("{:?}: {}", p, resp.status());
+    timing!("gearbot_proxy_requests", start, end, "method"=>m.to_string(), "route"=>p, "status"=>resp.status().to_string());
+    info!("{} {}: {}", m, p, resp.status());
 
     Ok(resp)
 }
