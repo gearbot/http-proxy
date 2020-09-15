@@ -5,8 +5,7 @@ name = "twilight-http-proxy"
 version = "0.1.0"
 
 [dependencies]
-#twilight-http = { branch = "trunk", git = "https://github.com/aenterprise/twilight.git", default_features=false, features=["rustls"] }
-twilight-http = { path="../../../rust/twilight/http", default_features=false, features=["rustls"] }
+twilight-http = { version="0.1.1", default_features=false, features=["rustls"] }
 hyper = "0.13"
 http = "0.2"
 tracing = "0.1"
