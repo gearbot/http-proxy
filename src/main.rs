@@ -108,7 +108,6 @@ fn path_name(path: &Path) -> &'static str {
         Path::Guilds=> "Guilds",
         Path::GuildsId(..)=> "Guild",
         Path::GuildsIdBans(..)=> "Guild bans",
-        Path::GuildsIdBansId(..)=> "Specific guild ban",
         Path::GuildsIdAuditLogs(..)=> "Guild audit logs",
         Path::GuildsIdBansUserId(..)=> "Guild ban for user",
         Path::GuildsIdChannels(..)=> "Guild channel",
