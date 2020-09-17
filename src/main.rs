@@ -24,10 +24,6 @@ use tracing_subscriber::{fmt, EnvFilter};
 use twilight_http::{client::Client, request::Request as TwilightRequest, routing::Path};
 use std::time::Instant;
 use metrics::timing;
-use metrics_core::{Builder, Drain};
-use http::StatusCode;
-use tokio::sync::RwLock;
-use lazy_static::lazy_static;
 use metrics_runtime::{exporters::HttpExporter, observers::PrometheusBuilder, Receiver};
 
 
@@ -61,7 +57,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let controller = receiver.controller();
     receiver.install();
-    let mut exporter = HttpExporter::new(
+    let exporter = HttpExporter::new(
         controller,
         PrometheusBuilder::new(),
         SocketAddr::from((host, port+1)),
@@ -142,6 +138,7 @@ fn path_name(path: &Path) -> &'static str {
         Path::UsersIdGuildsId=> "Guild from user",
         Path::VoiceRegions=> "Voice region list",
         Path::WebhooksId(..)=> "Webhook",
+        Path::OauthApplicationsMe => "Current application info",
         _ => "Unknown path!"
     }
 }
@@ -165,7 +162,13 @@ async fn handle_request(
     } else {
         uri.path().to_owned()
     };
-    let path = Path::try_from((method.clone(), trimmed_path.as_ref())).context(InvalidPath)?;
+    let path = match Path::try_from((method.clone(), trimmed_path.as_ref())).context(InvalidPath) {
+        Ok(path) => path,
+        Err(e) => {
+            error!("Error determining path for {}: {:?}", trimmed_path, e);
+            return Err(e);
+        }
+    };
 
     let bytes = (hyper::body::to_bytes(body).await.context(ChunkingRequest)?)
         .to_owned()
