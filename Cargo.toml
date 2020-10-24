@@ -12,7 +12,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.2", features = ["fmt", "registry"] }
 tracing-log = "0.1"
 reqwest = {version="0.10", default_features=false, features= ["rustls-tls"]}
-snafu = "0.5"
+snafu = "0.6"
 tokio = { version = "0.2", features = ["rt-core", "macros"] }
 metrics = "0.12"
 metrics-observer-prometheus = "0.1"
