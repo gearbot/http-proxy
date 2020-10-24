@@ -1387,9 +1387,9 @@ checksum = "59547bce71d9c38b83d9c0e92b6066c4253371f15005def0c30d9657f50c7642"
 
 [[package]]
 name = "twilight-http"
-version = "0.1.4"
+version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b8c277e08886a571652fe38f1346a7e51ec7615c21f05ef2c6ed807407efe0fc"
+checksum = "74e7e91c0d35104e4967739bb239c257309540101d8d646e32f129131af76497"
 dependencies = [
  "bytes",
  "futures-channel",
