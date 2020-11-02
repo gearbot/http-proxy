@@ -1387,9 +1387,9 @@ checksum = "59547bce71d9c38b83d9c0e92b6066c4253371f15005def0c30d9657f50c7642"
 
 [[package]]
 name = "twilight-http"
-version = "0.1.4"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b8c277e08886a571652fe38f1346a7e51ec7615c21f05ef2c6ed807407efe0fc"
+checksum = "99c9aec632e71e909fc2e6b6ce011665bac4483e29b5babebc80348fbbbeb556"
 dependencies = [
  "bytes",
  "futures-channel",
@@ -1426,9 +1426,9 @@ dependencies = [
 
 [[package]]
 name = "twilight-model"
-version = "0.1.2"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5ad95c38079c411dc705ff816489e6f3daff30e60b2920b9d6937c955d5a0dcb"
+checksum = "31d47cb94f8e9dbc5cb2498f5e90158545647fac557a359b3890788861db0512"
 dependencies = [
  "bitflags",
  "serde",
